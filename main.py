@@ -1,56 +1,45 @@
-import socket
-import smtplib
-import os 
-import dns.resolver
+import pandas as pd
+from emailVerifier import verify
 
 
-def verify(email):
-    try:
-        domain = email.split("@")[1]
-        records = dns.resolver.resolve(domain, 'MX')
-        mxRecord = records[0].exchange
-        mxRecord = str(mxRecord)
-        if len(mxRecord)<2:
-            return False
-    except:
-        return False
+df = pd.read_csv("list1.csv")
+df = df.to_numpy()
+newdata = ["Business Name", "Email","Phone Number","Website","Email Verfication"]
+for d in df:
     
-    host = "kentel.dev"
-   
-    # SMTP lib setup (use debug level for full output)
-    server = smtplib.SMTP()
-    server.set_debuglevel(0)
+    businessName = d[0]
+    email =""
+    phoneNumber = "N/A"
+    website = "N/A"
+    for _ in d:
+        _ = str(_)
+        if len(_)>6:
+            num = _.replace("-","").replace(" ","").replace("(","").replace(")","").replace("+","")
+            try:
+                num = int(num)
+                phoneNumber = _ 
+            except:
+                pass
+        if "@gmail.com" in _:
+            email = _
+        elif (".com" in _ ) and ("gmail" not in _):
+            website = _
+        
+    if email == "":
+        continue
+    email = email.lower()
 
-    # SMTP Conversation
-    server.connect(mxRecord)
-    server.helo(host)
-    server.mail('efeakaroz@kentel.dev')
-    code, message = server.rcpt(str(email))
-    server.quit()
-
-    if code == 250:
-        return True
+    
+    emailVerified = verify(email)
+    if emailVerified == True:
+        emailVerified = "Verified"
     else:
-        return False
+        emailVerified = "NOT VERIFIED"
+    out = [businessName,email,phoneNumber,website,emailVerified]
+    newdata.append(out)
+    print(out)
 
 
-
-
-
-
-elist = open("list.txt","r").readlines()
-
-verified = []
-unverified = []
-for e in elist:
-    e= e.replace("\n","")
-    e= e.replace(" ","")
-    if len(e)>3:
-        out = verify(e)
-        if out == True:
-            verified.append(e)
-        else:
-            unverified.append(e)
-
-print(verified)
-print(unverified)
+newdf = pd.DataFrame(newdata)
+newdf.to_csv("out.csv")  
+            
